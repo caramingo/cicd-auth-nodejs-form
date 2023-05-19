@@ -1,0 +1,86 @@
+
+stages:        
+  - build_to_docker
+  - run_on_develop
+  - test_dev_app
+  - deploy_to_prod
+  - test_prod
+
+
+build_image:
+  stage: build_to_docker
+  tags:
+    - node1
+  before_script:
+    - export APP_VERSION=$(cat package.json | jq -r .version)
+    - export VERSION=$APP_VERSION.$CI_PIPELINE_IID
+
+    # создаем новый тег при каждой сборке
+    - echo $VERSION > version-file.txt
+
+    # логинимся в докер хаб
+    - docker login -u "$CI_REGISTRY_USER" -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+ 
+    # добавялем текущую версию сборки на страницу приложения
+    - rpl  -q build $VERSION views/login.html  > /dev/null 2>&1
+  script:
+    # собираем образ
+    - docker build -t $IMAGE_NAME:$VERSION .
+    
+    # пушим образ в докер хаб
+    - docker push $IMAGE_NAME:$VERSION
+  artifacts:
+    paths:
+    - version-file.txt
+
+run_on_develop_server:       
+  stage: run_on_develop
+  tags:
+    - node1
+  before_script:
+    - export VERSION=$(cat version-file.txt) 
+    - echo $VERSION
+    
+    # получаем id запущенного контейнера и пишем его в переменну
+    - export DOCKER=$(docker ps  -q)
+
+    # останавливаем нужный контейнер
+    - docker stop $DOCKER
+  script:
+  # на девелоп сервере логинимся на докер хаб, тащим с него образ и запускаем   
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+     # запускаем контейнер 
+    - docker run -d -p 80:3000 $IMAGE_NAME:$VERSION
+
+test_develop:
+  stage: test_dev_app
+  tags: 
+    - node1
+  script:
+  # курлом получем ответ от приложения на 80 порту
+    - curl -Is http://1.1.1.1:80 | head -n 1   
+
+run_on_prod_server:       
+  stage: deploy_to_prod
+  tags:
+    - node3
+  before_script:
+    - export VERSION=$(cat version-file.txt) 
+    # получаем id запущенного контейнера и пишем его в переменну
+    - export DOCKER=$(docker ps  -q)
+
+    # останвливаем нужный контейнер
+    - docker stop $DOCKER
+  script:
+  # логинимся на докер хаб, затем тащим с него образ и запускаем   
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+    - docker run -d -p 80:3000 $IMAGE_NAME:$VERSION
+
+test_prod:
+  stage: test_prod
+  tags: 
+    - node3
+  script:
+  # курлом получем ответ от приложения на 80 порту
+    - curl -Is http://2.2.2.2:80 | head -n 1       

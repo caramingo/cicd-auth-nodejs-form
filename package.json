@@ -1,0 +1,17 @@
+{
+  "name": "auth-file-browser-ui",
+  "version": "1.1",
+  "private": true,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
+    "express": "4.16.2",
+    "express-session": "^1.15.6",
+    "hjs": "*",
+    "mustache-express": "^1.2.5",
+    "serve-index": "^1.9.1"
+  }
+}
