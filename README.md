@@ -11,5 +11,5 @@
 
 Для реализации в настройках пайплайна должны быть созданы переменные CI_REGISTRY, CI_REGISTRY_PASSWORD, CI_REGISTRY_USER, IMAGE_NAME Также должны существавать два раннера node1 - develop и node3 - prod. 
 
-#
+#test
 
